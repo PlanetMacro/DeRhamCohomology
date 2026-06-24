@@ -2,6 +2,7 @@ import Mathlib.Analysis.Calculus.FDeriv.Symmetric
 import DeRhamCohomology.ContinuousAlternatingMap.Curry
 import DeRhamCohomology.ContinuousAlternatingMap.FDeriv
 import DeRhamCohomology.ContinuousAlternatingMap.Wedge
+import DeRhamCohomology.ContinuousAlternatingMap.WedgeFDeriv
 import DeRhamCohomology.Equiv.Fin
 
 noncomputable section
@@ -360,20 +361,27 @@ theorem pullback_wedge (f : G → E) (ω₁ : Ω^m⟮E, F⟯) (ω₂ : Ω^n⟮E,
   simp only [Function.comp_apply, smul_left_cancel_iff]
   rfl
 
-/- The graded Leibniz rule for the exterior derivative of the wedge product -/
-theorem ederiv_wedge (ω : Ω^m⟮E, F⟯) (τ : Ω^n⟮E, F'⟯) (f : F →L[ℝ] F' →L[ℝ] F'') :
+/- The graded Leibniz rule for the exterior derivative of the wedge product.
+
+Note: the bare statement is false without differentiability assumptions (if `ω` is not
+differentiable at a point then `fderiv ℝ ω` is `0` there while `fderiv ℝ (ω ∧ τ)` need not be), so
+we add the (necessary) hypotheses `Differentiable ℝ ω` and `Differentiable ℝ τ`. -/
+theorem ederiv_wedge (ω : Ω^m⟮E, F⟯) (τ : Ω^n⟮E, F'⟯) (f : F →L[ℝ] F' →L[ℝ] F'')
+    (hω : Differentiable ℝ ω) (hτ : Differentiable ℝ τ) :
     ederiv (ω ∧[f] τ) = (domDomCongr finAddFlipAssoc (ederiv ω ∧[f] τ))
       + ((-1 : ℝ)^m) • ((ω ∧[f] ederiv τ)) := by
-  ext x y
-  rw[Pi.add_apply]
-  erw[ContinuousAlternatingMap.add_apply] -- FIXME
-  simp
-  rw[domDomCongr_apply, wedge_product_def, ContinuousAlternatingMap.wedge_product_def, uncurryFinAdd,
-    ContinuousAlternatingMap.domDomCongr_apply, uncurrySum_apply, wedge_product_def,
-    ContinuousAlternatingMap.wedge_product_def, uncurryFinAdd, ContinuousAlternatingMap.domDomCongr_apply,
-    uncurrySum_apply, ContinuousMultilinearMap.sum_apply, ContinuousMultilinearMap.sum_apply,
-    ederiv, uncurryFin_apply]
-  sorry
+  funext x
+  have key : fderiv ℝ (ω ∧[f] τ) x =
+      (ContinuousAlternatingMap.wedgeCLM (M := E) (m := m) (n := n) f).precompR E (ω x)
+          (fderiv ℝ τ x)
+        + (ContinuousAlternatingMap.wedgeCLM (M := E) (m := m) (n := n) f).precompL E (fderiv ℝ ω x)
+          (τ x) :=
+    ContinuousAlternatingMap.fderiv_wedge f (hω x) (hτ x)
+  show ContinuousAlternatingMap.uncurryFin (fderiv ℝ (ω ∧[f] τ) x) = _
+  rw [key, ContinuousAlternatingMap.uncurryFin_add,
+    ContinuousAlternatingMap.uncurryFin_precompR_wedge,
+    ContinuousAlternatingMap.uncurryFin_precompL_wedge, Pi.add_apply, Pi.smul_apply]
+  exact add_comm _ _
 
 /- The graded Leibniz rule for the interior product of the wedge product -/
 theorem iprod_wedge (ω : Ω^m + 1⟮E, F⟯) (τ : Ω^n + 1⟮E, F'⟯) (f : F →L[ℝ] F' →L[ℝ] F'') (v : E → E) :

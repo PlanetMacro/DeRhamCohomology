@@ -446,6 +446,46 @@ theorem wedge_antisymm (g : M [⋀^Fin m]→L[𝕜] 𝕜) (h : M [⋀^Fin n]→L
     zsmul_eq_mul, Int.cast_pow, Int.cast_neg, Int.cast_one, smul_eq_mul, ← mul_assoc,
     ← pow_add, Even.neg_one_pow ⟨m*n, rfl⟩, one_mul]
 
+/-- General-`f` antisymmetry of the wedge product: swapping the two factors swaps the bilinear
+pairing to its flip, costs the Koszul sign `(-1)^(m*n)`, and reindexes by `finAddCongr`.
+This generalises `wedge_antisymm` from the scalar-multiplication pairing to an arbitrary `f`. -/
+theorem wedge_flip (g : M [⋀^Fin m]→L[𝕜] N) (h : M [⋀^Fin n]→L[𝕜] N')
+    (f : N →L[𝕜] N' →L[𝕜] N'') :
+    (g ∧[f] h) = ((-1 : 𝕜) ^ (m * n) • (h ∧[f.flip] g)).domDomCongr finAddCongr := by
+  ext x
+  rw [domDomCongr_apply, smul_apply, wedge_product_def, uncurryFinAdd, domDomCongr_apply,
+    uncurrySum_apply, ContinuousMultilinearMap.sum_apply, wedge_product_def,
+    uncurryFinAdd, domDomCongr_apply, uncurrySum_apply, ContinuousMultilinearMap.sum_apply]
+  conv_rhs => rw [← Equiv.sum_comp wedgeFlipEquiv]
+  rw [Finset.smul_sum]
+  apply Finset.sum_congr rfl
+  intro σ hσ
+  rcases σ with ⟨σ₁⟩
+  rw [wedgeFlipEquiv_mk]
+  rw [uncurrySum.summand_mk]
+  rw [ContinuousMultilinearMap.smul_apply, ContinuousMultilinearMap.domDomCongr_apply,
+    ContinuousMultilinearMap.uncurrySum_apply, ContinuousMultilinearMap.flipMultilinear_apply,
+    coe_toContinuousMultilinearMap, ContinuousMultilinearMap.flipAlternating_apply,
+    coe_toContinuousMultilinearMap, ContinuousLinearMap.compContinuousAlternatingMap₂_apply]
+  rw [uncurrySum.summand_mk]
+  rw [ContinuousMultilinearMap.smul_apply, ContinuousMultilinearMap.domDomCongr_apply,
+    ContinuousMultilinearMap.uncurrySum_apply, ContinuousMultilinearMap.flipMultilinear_apply,
+    coe_toContinuousMultilinearMap, ContinuousMultilinearMap.flipAlternating_apply,
+    coe_toContinuousMultilinearMap, ContinuousLinearMap.compContinuousAlternatingMap₂_apply]
+  have harg1 : ((fun i => ((x ∘ ⇑finAddCongr) ∘ ⇑finSumFinEquiv)
+        ((sumRotatePerm * sumCommPerm σ₁ : Equiv.Perm (Fin n ⊕ Fin m)) i)) ∘ Sum.inl)
+      = ((fun i => (x ∘ ⇑finSumFinEquiv) (σ₁ i)) ∘ Sum.inr) :=
+    funext fun k => congrArg x (wedgeFlip_arg_inl σ₁ k)
+  have harg2 : ((fun i => ((x ∘ ⇑finAddCongr) ∘ ⇑finSumFinEquiv)
+        ((sumRotatePerm * sumCommPerm σ₁ : Equiv.Perm (Fin n ⊕ Fin m)) i)) ∘ Sum.inr)
+      = ((fun i => (x ∘ ⇑finSumFinEquiv) (σ₁ i)) ∘ Sum.inl) :=
+    funext fun j => congrArg x (wedgeFlip_arg_inr σ₁ j)
+  rw [harg1, harg2, ContinuousLinearMap.flip_apply, map_mul, sign_sumRotatePerm,
+    sign_sumCommPerm, mul_smul]
+  rw [Units.smul_def ((-1 : ℤˣ) ^ (m * n)), Units.val_pow_eq_pow_val, Units.val_neg,
+    Units.val_one, ← Int.cast_smul_eq_zsmul 𝕜, Int.cast_pow, Int.cast_neg, Int.cast_one, smul_smul,
+    ← pow_add, Even.neg_one_pow ⟨m * n, rfl⟩, one_smul]
+
 variable {M : Type*} [NormedAddCommGroup M] [NormedSpace ℝ M]
 
 -- UNUSED functionality
