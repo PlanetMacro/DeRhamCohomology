@@ -94,12 +94,20 @@ def flipMultilinear (f : ContinuousMultilinearMap 𝕜 (fun _ : ι ↦ M) (Conti
     { toFun := fun m =>
         MultilinearMap.mkContinuous
           { toFun := fun m' => f m' m
-            map_update_add' := sorry
-            map_update_smul' := sorry}
-          1 sorry
-      map_update_add' := sorry
-      map_update_smul' := sorry }
-    1 sorry
+            map_update_add' := fun m' i x y => by rw [f.map_update_add m' i x y]; rfl
+            map_update_smul' := fun m' i c x => by rw [f.map_update_smul m' i c x]; rfl }
+          (‖f‖ * ∏ j, ‖m j‖)
+          (fun m' => by
+            calc ‖f m' m‖ ≤ ‖f m'‖ * ∏ j, ‖m j‖ := (f m').le_opNorm m
+              _ ≤ (‖f‖ * ∏ i, ‖m' i‖) * ∏ j, ‖m j‖ := by gcongr; exact f.le_opNorm m'
+              _ = (‖f‖ * ∏ j, ‖m j‖) * ∏ i, ‖m' i‖ := by ring)
+      map_update_add' := fun m i x y => by ext m'; simp [(f m').map_update_add]
+      map_update_smul' := fun m i c x => by ext m'; simp [(f m').map_update_smul] }
+    ‖f‖
+    (fun m => ContinuousMultilinearMap.opNorm_le_bound (by positivity) fun m'' => by
+      calc ‖f m'' m‖ ≤ ‖f m''‖ * ∏ j, ‖m j‖ := (f m'').le_opNorm m
+        _ ≤ (‖f‖ * ∏ i, ‖m'' i‖) * ∏ j, ‖m j‖ := by gcongr; exact f.le_opNorm m''
+        _ = (‖f‖ * ∏ j, ‖m j‖) * ∏ i, ‖m'' i‖ := by ring)
 
 theorem flipMultilinear_apply (f : ContinuousMultilinearMap 𝕜 (fun _ : ι ↦ M)
     (ContinuousMultilinearMap 𝕜 (fun _ : ι' ↦ M') N)) (m : ι → M) (m' : ι' → M') :
