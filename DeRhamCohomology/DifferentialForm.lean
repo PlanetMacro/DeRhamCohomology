@@ -136,7 +136,7 @@ theorem ederivWithin_ederivWithin_apply (ω : Ω^n⟮E, F⟯) {s : Set E} {t : S
     have : DifferentiableWithinAt ℝ (fderivWithin ℝ ω s) s x := (h.fderivWithin_right hs le_rfl hx).differentiableWithinAt le_rfl
     exact (uncurryFinCLM.hasFDerivWithinAt.comp x this.hasFDerivWithinAt hst).fderivWithin (hs.uniqueDiffWithinAt hx)
   _ = 0 :=
-    uncurryFin_uncurryFinCLM_comp_of_symmetric <| h.isSymmSndFDerivWithinAt le_rfl hs hxx hx
+    uncurryFin_uncurryFinCLM_comp_of_symmetric <| h.isSymmSndFDerivWithinAt (by simp) hs hxx hx
 
 theorem ederivWithin_ederivWithin (ω : Ω^n⟮E, F⟯) {s : Set E} {t : Set (E →L[ℝ] E [⋀^Fin n]→L[ℝ] F)}
     (hst : MapsTo (fderivWithin ℝ ω s) s t) (h : ContDiffOn ℝ 2 ω s) (hs : UniqueDiffOn ℝ s) :
@@ -170,14 +170,12 @@ theorem ederiv_apply (ω : Ω^n⟮E, F⟯) {x : E} (hx : DifferentiableAt ℝ ω
     ContinuousAlternatingMap.fderiv_apply hx]
 
 theorem ederiv_ederiv_apply (ω : Ω^n⟮E, F⟯) {x} (h : ContDiffAt ℝ 2 ω x) :
-    ederiv (ederiv ω) x = 0 := calc
-  ederiv (ederiv ω) x = uncurryFin (fderiv ℝ (fun y ↦ uncurryFin (fderiv ℝ ω y)) x) := rfl
-  _ = uncurryFin (uncurryFinCLM.comp <| fderiv ℝ (fderiv ℝ ω) x) := by
-    congr 1
-    have : DifferentiableAt ℝ (fderiv ℝ ω) x := (h.fderiv_right le_rfl).differentiableAt le_rfl
-    exact (uncurryFinCLM.hasFDerivAt.comp x this.hasFDerivAt).fderiv
-  _ = 0 :=
-    uncurryFin_uncurryFinCLM_comp_of_symmetric <| h.isSymmSndFDerivAt le_rfl
+    ederiv (ederiv ω) x = 0 := by
+  -- Reduce to the `ederivWithin` version on `univ`, which avoids having to pin down the
+  -- normed-space instances of the intermediate `E →L[ℝ] E [⋀^Fin n]→L[ℝ] F` by hand.
+  have key := ederivWithin_ederivWithin_apply ω (s := univ) (t := univ)
+    (by simp) (mem_univ x) (mapsTo_univ _ _) h.contDiffWithinAt uniqueDiffOn_univ
+  simpa only [ederivWithin_univ] using key
 
 theorem ederiv_ederiv (ω : Ω^n⟮E, F⟯) (h : ContDiff ℝ 2 ω) : ederiv (ederiv ω) = 0 :=
   funext fun _ ↦ ederiv_ederiv_apply ω h.contDiffAt

@@ -187,8 +187,10 @@ theorem continuousOn_continuousAlternatingMapCoordChange
   have h₄ := (continuousOn_coordChange 𝕜 e₂ e₂')
   let s (q : (F₁ →L[𝕜] F₁) × (F₂ →L[𝕜] F₂)) :
       (F₁ →L[𝕜] F₁) × ((F₁ [⋀^ι]→L[𝕜] F₂) →L[𝕜] (F₁ [⋀^ι]→L[𝕜] F₂)) :=
-    (q.1, ContinuousLinearMap.compContinuousAlternatingMapL 𝕜 F₁ F₂ F₂ q.2)
-  have hs : Continuous s := continuous_id.prodMap (ContinuousLinearMap.continuous _)
+    (q.1, ContinuousLinearMap.compContinuousAlternatingMapCLM 𝕜 F₁ F₂ F₂ q.2)
+  have hs : Continuous s :=
+    continuous_id.prodMap
+      (ContinuousLinearMap.continuous (ContinuousLinearMap.compContinuousAlternatingMapCLM 𝕜 F₁ F₂ F₂))
   -- note: the following `refine` worked in Lean 3; in Lean 4 this times out so has been replaced by
   -- the `have`/`exact` pair with an explicitly-provided `s` argument
   -- refine ((continuous_snd.clm_comp

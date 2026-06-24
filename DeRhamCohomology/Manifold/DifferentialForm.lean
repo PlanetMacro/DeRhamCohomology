@@ -14,8 +14,15 @@ variable
   {EM : Type*} [NormedAddCommGroup EM] [NormedSpace ℝ EM]
   {HM : Type*} [TopologicalSpace HM]
   (IM : ModelWithCorners ℝ EM HM)
-  (M : Type*) [TopologicalSpace M] [ChartedSpace HM M] [SmoothManifoldWithCorners IM M]
+  (M : Type*) [TopologicalSpace M] [ChartedSpace HM M] [IsManifold IM ⊤ M]
   {m n : ℕ} {k l : ℕ∞}
+
+-- `TangentSpace IM x` is reducibly `EM`. Mathlib intentionally omits the normed-space instances on
+-- `TangentSpace` to keep type-class search from guessing them; here we record the ones agreeing with
+-- `EM`'s, so the instances inferred for `TangentSpace IM x` coincide with those used by
+-- `writtenInExtChartAt`/`iprod`/`wedge_product` (which see the underlying `EM`).
+local instance (x : M) : NormedAddCommGroup (TangentSpace IM x) := inferInstanceAs (NormedAddCommGroup EM)
+local instance (x : M) : NormedSpace ℝ (TangentSpace IM x) := inferInstanceAs (NormedSpace ℝ EM)
 
 -- Setup for Differential Form Space
 notation "Ω^" k "," m "⟮" EM "," IM "," M "⟯" =>
@@ -30,7 +37,7 @@ variable
   {EN : Type*} [NormedAddCommGroup EN] [NormedSpace ℝ EN]
   {HN : Type*} [TopologicalSpace HN]
   (IN : ModelWithCorners ℝ EN HN)
-  (N : Type*) [TopologicalSpace N] [ChartedSpace HN N] [SmoothManifoldWithCorners IN N]
+  (N : Type*) [TopologicalSpace N] [ChartedSpace HN N] [IsManifold IN ⊤ N]
 
 variable (α β : (x : N) → TangentSpace IN x [⋀^Fin m]→L[ℝ] Trivial N ℝ x)
 
@@ -65,7 +72,6 @@ section miprod
 
 variable
   [ChartedSpace (EM [⋀^Fin (m + 1)]→L[ℝ] ℝ) 𝒜⟮ℝ,Fin (m + 1);EM,TangentSpace IM;ℝ,Trivial M ℝ⟯]
-  [Π (x : M), NormedAddCommGroup (TangentSpace IM x)]
 
 def miprod (α : Ω^k,m + 1⟮EM, IM, M⟯) (V : Π (x : M), TangentSpace IM x) :
     (x : M) → TangentSpace IM x [⋀^Fin m]→L[ℝ] Trivial M ℝ x :=
@@ -81,7 +87,6 @@ section mwedge_product
 variable
   [ChartedSpace (EM [⋀^Fin m]→L[ℝ] ℝ) 𝒜⟮ℝ,Fin m;EM,TangentSpace IM;ℝ,Trivial M ℝ⟯] -- Shouldn't this just be true already?
   [ChartedSpace (EM [⋀^Fin n]→L[ℝ] ℝ) 𝒜⟮ℝ,Fin n;EM,TangentSpace IM;ℝ,Trivial M ℝ⟯] -- Shouldn't this just be true already?
-  [Π (x : M), NormedAddCommGroup (TangentSpace IM x)]
 
 /- Place for wedge product definitions -/
 def mwedge_product (α : Ω^k,m⟮EM, IM, M⟯) (β : Ω^l,n⟮EM, IM, M⟯) :
