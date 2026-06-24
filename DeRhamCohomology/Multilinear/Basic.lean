@@ -69,12 +69,23 @@ def LinearIsometryEquiv.flipMultilinear :
   left_inv := congrFun rfl
   right_inv := congrFun rfl
   norm_map' := fun f => by
-    simp
-    -- simp_rw[ContinuousLinearMap.flipMultilinear, MultilinearMap.mkContinuous, LinearMap.mkContinuous]
-    have h : ∀ m : ((i : ι) → E i), ∀ x : G, ‖f.flipMultilinear m x‖ = ‖f x m‖ := by
-      exact fun m x ↦ rfl
-    -- simp [apply_apply]
-    sorry
+    -- `‖f.flipMultilinear‖ = ‖f‖`: both directions follow from `‖f.flipMultilinear m x‖ = ‖f x m‖`
+    -- and the respective operator-norm bounds.
+    refine le_antisymm ?_ ?_
+    · refine ContinuousMultilinearMap.opNorm_le_bound (norm_nonneg f) fun m => ?_
+      refine ContinuousLinearMap.opNorm_le_bound _ (by positivity) fun x => ?_
+      calc ‖f.flipMultilinear m x‖ = ‖f x m‖ := rfl
+        _ ≤ ‖f x‖ * ∏ i, ‖m i‖ := (f x).le_opNorm m
+        _ ≤ (‖f‖ * ‖x‖) * ∏ i, ‖m i‖ := by gcongr; exact f.le_opNorm x
+        _ = (‖f‖ * ∏ i, ‖m i‖) * ‖x‖ := by ring
+    · show ‖f‖ ≤ ‖f.flipMultilinear‖
+      refine ContinuousLinearMap.opNorm_le_bound f (norm_nonneg f.flipMultilinear) fun x => ?_
+      refine ContinuousMultilinearMap.opNorm_le_bound (by positivity) fun m => ?_
+      calc ‖f x m‖ = ‖f.flipMultilinear m x‖ := rfl
+        _ ≤ ‖f.flipMultilinear m‖ * ‖x‖ := (f.flipMultilinear m).le_opNorm x
+        _ ≤ (‖f.flipMultilinear‖ * ∏ i, ‖m i‖) * ‖x‖ := by
+              gcongr; exact f.flipMultilinear.le_opNorm m
+        _ = (‖f.flipMultilinear‖ * ‖x‖) * ∏ i, ‖m i‖ := by ring
 
 namespace ContinuousMultilinearMap
 
