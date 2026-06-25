@@ -811,6 +811,519 @@ theorem uncurryFin_precompR_wedge (f : N →L[𝕜] N' →L[𝕜] N'')
     rw [pow_mul, neg_one_sq, one_pow]
   rw [show m + m * (n + 1) = m * n + 2 * m by ring, pow_add, h2, mul_one]
 
+
+/-! ### The interior-product (slot-0 contraction) Leibniz rule -/
+
+-- claim (b): right slots.
+theorem claim_b (σ' : Equiv.Perm (Fin m ⊕ Fin (n + 1))) (x₀ : E) (y : Fin (m + (n + 1)) → E) :
+    (fun j => ((Fin.cons x₀ y ∘ ⇑finAddFlipAssoc) ∘ ⇑finSumFinEquiv)
+        (insPerm (0 : Fin (m + (n + 1) + 1)) σ' (Sum.inr j)))
+      = (fun j => y (finSumFinEquiv (σ' (Sum.inr j)))) := by
+  funext j
+  show (Fin.cons x₀ y : Fin _ → E)
+      (insSumEquiv (insPerm (0 : Fin (m + (n + 1) + 1)) σ' (Sum.inr j))) = _
+  rw [insPerm, Equiv.trans_apply, Equiv.apply_symm_apply, insHat_inr, Fin.succAbove_zero,
+    Fin.cons_succ]
+
+-- claim (a): left slots.
+theorem claim_a (σ' : Equiv.Perm (Fin m ⊕ Fin (n + 1))) (x₀ : E) (y : Fin (m + (n + 1)) → E) :
+    (fun i => ((Fin.cons x₀ y ∘ ⇑finAddFlipAssoc) ∘ ⇑finSumFinEquiv)
+        (insPerm (0 : Fin (m + (n + 1) + 1)) σ' (Sum.inl i)))
+      = (Fin.cons x₀ (fun i => y (finSumFinEquiv (σ' (Sum.inl i)))) : Fin _ → E) := by
+  funext i
+  show (Fin.cons x₀ y : Fin _ → E)
+      (insSumEquiv (insPerm (0 : Fin (m + (n + 1) + 1)) σ' (Sum.inl i))) = _
+  rw [insPerm, Equiv.trans_apply, Equiv.apply_symm_apply]
+  induction i using Fin.cases with
+  | zero => rw [insHat_inl_zero, Fin.cons_zero, Fin.cons_zero]
+  | succ k => rw [insHat_inl_succ, Fin.succAbove_zero, Fin.cons_succ, Fin.cons_succ]
+
+/-- Which factor the contracted slot `inl 0` feeds into, as a class invariant. -/
+def isLeftClass : Equiv.Perm.ModSumCongr (Fin (m + 1)) (Fin (n + 1)) → Bool :=
+  fun q => Quotient.liftOn' q (fun σ => (σ⁻¹ (Sum.inl 0)).isLeft) (by
+    intro a b hab
+    rw [QuotientGroup.leftRel_apply] at hab
+    obtain ⟨⟨sl, sr⟩, hb⟩ := hab
+    simp only [Equiv.Perm.sumCongrHom_apply] at hb
+    have hbb : b = a * Equiv.sumCongr sl sr := by
+      rw [show Equiv.sumCongr sl sr = sl.sumCongr sr from rfl, hb, mul_inv_cancel_left]
+    rw [hbb]
+    simp only [mul_inv_rev, Equiv.Perm.coe_mul, Function.comp_apply]
+    rcases h0 : a⁻¹ (Sum.inl 0) with i | j <;>
+      simp [Equiv.sumCongr_symm, Equiv.sumCongr_apply, h0])
+
+theorem summandA (g : E [⋀^Fin (m + 1)]→L[𝕜] N) (h : E [⋀^Fin (n + 1)]→L[𝕜] N')
+    (f : N →L[𝕜] N' →L[𝕜] N'') (x₀ : E) (y : Fin (m + (n + 1)) → E)
+    (σ' : Equiv.Perm (Fin m ⊕ Fin (n + 1))) :
+    uncurrySum.summand (f.compContinuousAlternatingMap₂ g h)
+        (Quotient.mk'' (insPerm (0 : Fin (m + (n + 1) + 1)) σ'))
+        ((Fin.cons x₀ y ∘ ⇑finAddFlipAssoc) ∘ ⇑finSumFinEquiv)
+      = uncurrySum.summand (f.compContinuousAlternatingMap₂ (curryFin g x₀) h)
+        (Quotient.mk'' σ') (y ∘ ⇑finSumFinEquiv) := by
+  rw [summand_mk_eval, summand_mk_eval, sign_insPerm_zero]
+  congr 1
+  rw [ContinuousLinearMap.compContinuousAlternatingMap₂_apply,
+    ContinuousLinearMap.compContinuousAlternatingMap₂_apply, curryFin_apply,
+    claim_a σ' x₀ y, claim_b σ' x₀ y]
+  rfl
+
+-- Identity 1 (Part A): the left-classes reconstruct term1.
+theorem identityA (g : E [⋀^Fin (m + 1)]→L[𝕜] N) (h : E [⋀^Fin (n + 1)]→L[𝕜] N')
+    (f : N →L[𝕜] N' →L[𝕜] N'') (x₀ : E) (y : Fin (m + (n + 1)) → E) :
+    ∑ σ' : Equiv.Perm.ModSumCongr (Fin m) (Fin (n + 1)),
+        uncurrySum.summand (f.compContinuousAlternatingMap₂ (curryFin g x₀) h) σ'
+          (y ∘ ⇑finSumFinEquiv)
+      = ∑ σ ∈ Finset.univ.filter (fun q => isLeftClass q = true),
+        uncurrySum.summand (f.compContinuousAlternatingMap₂ g h) σ
+          ((Fin.cons x₀ y ∘ ⇑finAddFlipAssoc) ∘ ⇑finSumFinEquiv) := by
+  refine Finset.sum_bij (fun σ' _ => proj (0, σ')) ?_ ?_ ?_ ?_
+  · -- maps into the left-classes
+    intro a _
+    rw [Finset.mem_filter]
+    refine ⟨Finset.mem_univ _, ?_⟩
+    induction a using Quotient.inductionOn' with
+    | _ σ =>
+      have key : (insPerm (0 : Fin (m + (n + 1) + 1)) σ)⁻¹ (Sum.inl 0) = Sum.inl 0 := by
+        rw [Equiv.Perm.inv_eq_iff_eq]; symm
+        rw [insPerm, Equiv.trans_apply, insHat_inl_zero,
+          show (0 : Fin (m + (n + 1) + 1)) = insSumEquiv (Sum.inl 0) from insSumEquiv_inl_zero.symm,
+          Equiv.symm_apply_apply]
+      simp only [proj_mk, isLeftClass, Quotient.liftOn'_mk'', key, Sum.isLeft_inl]
+  · -- injective
+    intro a₁ _ a₂ _ heq
+    induction a₁ using Quotient.inductionOn' with
+    | _ σ₁ =>
+    induction a₂ using Quotient.inductionOn' with
+    | _ σ₂ =>
+      simp only [proj_mk] at heq
+      exact proj_left_injective 0 σ₁ σ₂ heq
+  · -- surjective onto left-classes
+    intro b hb
+    rw [Finset.mem_filter] at hb
+    induction b using Quotient.inductionOn' with
+    | _ τ =>
+      rcases h0 : τ⁻¹ (Sum.inl 0) with i₀ | j₀
+      · refine ⟨Quotient.mk'' (restPerm τ i₀), Finset.mem_univ _, ?_⟩
+        have hτ : τ (Sum.inl i₀) = Sum.inl 0 := by rw [← h0, Equiv.Perm.apply_inv_self]
+        have hmark : markedOut τ i₀ = 0 := by rw [markedOut, hτ, insSumEquiv_inl_zero]
+        simp only [proj_mk]
+        rw [← hmark, insPerm_markedOut_restPerm, Quotient.eq'', QuotientGroup.leftRel_apply]
+        refine ⟨(i₀.cycleRange, Equiv.refl (Fin (n + 1))), ?_⟩
+        simp only [Equiv.Perm.sumCongrHom_apply]
+        have hg : (τ * slotMove i₀)⁻¹ * τ = (slotMove i₀)⁻¹ := by group
+        rw [hg, slotMove_inv]
+      · have hb2 := hb.2
+        simp only [isLeftClass, Quotient.liftOn'_mk'', h0, Sum.isLeft_inr,
+          Bool.false_eq_true] at hb2
+  · -- term identity
+    intro a _
+    induction a using Quotient.inductionOn' with
+    | _ σ' => simp only [proj_mk]; exact (summandA g h f x₀ y σ').symm
+
+/- ===================== Part B: right-block insertion ===================== -/
+
+/-- `Fin (m+1) ⊕ Option (Fin n) ≃ Option (Fin (m+1) ⊕ Fin n)`. -/
+def optSumR : Fin (m + 1) ⊕ Option (Fin n) ≃ Option (Fin (m + 1) ⊕ Fin n) where
+  toFun := Sum.elim (fun i => some (Sum.inl i)) (fun o => o.map Sum.inr)
+  invFun := fun o => o.elim (Sum.inr none) (Sum.elim Sum.inl (fun j => Sum.inr (some j)))
+  left_inv := by rintro (i | (_ | j)) <;> rfl
+  right_inv := by rintro (_ | (i | j)) <;> rfl
+
+@[simp] theorem optSumR_inl (i : Fin (m + 1)) :
+    (optSumR (n := n)) (Sum.inl i) = some (Sum.inl i) := rfl
+@[simp] theorem optSumR_inr_none : (optSumR (m := m) (n := n)) (Sum.inr none) = none := rfl
+@[simp] theorem optSumR_inr_some (j : Fin n) :
+    (optSumR (m := m)) (Sum.inr (some j)) = some (Sum.inr j) := rfl
+
+theorem fse0_symm_some {p : ℕ} (j : Fin p) :
+    (finSuccEquiv' (0 : Fin (p + 1))).symm (some j) = j.succ := by
+  rw [finSuccEquiv'_symm_some, Fin.succAbove_zero]
+theorem fse0_symm_none {p : ℕ} : (finSuccEquiv' (0 : Fin (p + 1))).symm none = 0 :=
+  finSuccEquiv'_symm_none 0
+theorem fse0_succ {p : ℕ} (j : Fin p) : (finSuccEquiv' (0 : Fin (p + 1))) j.succ = some j := by
+  rw [← Fin.succAbove_zero (n := p), finSuccEquiv'_succAbove]
+
+/-- Drop the marked slot `inr 0` from the right block. -/
+def dropR : Fin (m + 1) ⊕ Fin (n + 1) ≃ Option (Fin (m + 1) ⊕ Fin n) :=
+  (Equiv.sumCongr (Equiv.refl (Fin (m + 1))) (finSuccEquiv' 0)).trans optSumR
+
+@[simp] theorem dropR_inl (i : Fin (m + 1)) : (dropR (n := n)) (Sum.inl i) = some (Sum.inl i) := by
+  simp [dropR]
+@[simp] theorem dropR_inr_zero : (dropR (m := m) (n := n)) (Sum.inr 0) = none := by
+  simp [dropR]
+@[simp] theorem dropR_inr_succ (j : Fin n) :
+    (dropR (m := m)) (Sum.inr j.succ) = some (Sum.inr j) := by
+  simp only [dropR, Equiv.trans_apply, Equiv.sumCongr_apply, Sum.map_inr, fse0_succ,
+    optSumR_inr_some]
+
+@[simp] theorem dropR_symm_none : (dropR (m := m) (n := n)).symm none = Sum.inr 0 :=
+  dropR.symm_apply_eq.mpr dropR_inr_zero.symm
+@[simp] theorem dropR_symm_some_inl (i : Fin (m + 1)) :
+    (dropR (n := n)).symm (some (Sum.inl i)) = Sum.inl i :=
+  dropR.symm_apply_eq.mpr (dropR_inl i).symm
+@[simp] theorem dropR_symm_some_inr (j : Fin n) :
+    (dropR (m := m)).symm (some (Sum.inr j)) = Sum.inr j.succ :=
+  dropR.symm_apply_eq.mpr (dropR_inr_succ j).symm
+
+/-- Insert the marked slot `inr 0 ↦ output 0`, laying out the rest of `b` past output 0. -/
+def insHatR (b : Equiv.Perm (Fin (m + 1) ⊕ Fin n)) :
+    Fin (m + 1) ⊕ Fin (n + 1) ≃ Fin (m + 1 + (n + 1)) :=
+  dropR.trans <| (Equiv.optionCongr b).trans <|
+    (Equiv.optionCongr finSumFinEquiv).trans (finSuccEquiv' 0).symm
+
+theorem insHatR_inr_zero (b : Equiv.Perm (Fin (m + 1) ⊕ Fin n)) :
+    insHatR b (Sum.inr 0) = 0 := by
+  simp only [insHatR, Equiv.trans_apply, dropR_inr_zero, Equiv.optionCongr_apply, Option.map_none]
+  exact fse0_symm_none
+
+theorem insHatR_inl (b : Equiv.Perm (Fin (m + 1) ⊕ Fin n)) (i : Fin (m + 1)) :
+    insHatR b (Sum.inl i) = (finSumFinEquiv (b (Sum.inl i))).succ := by
+  simp only [insHatR, Equiv.trans_apply, dropR_inl, Equiv.optionCongr_apply, Option.map_some]
+  exact fse0_symm_some _
+
+theorem insHatR_inr_succ (b : Equiv.Perm (Fin (m + 1) ⊕ Fin n)) (j : Fin n) :
+    insHatR b (Sum.inr j.succ) = (finSumFinEquiv (b (Sum.inr j))).succ := by
+  simp only [insHatR, Equiv.trans_apply, dropR_inr_succ, Equiv.optionCongr_apply, Option.map_some]
+  exact fse0_symm_some _
+
+/-- Right-block insertion as a permutation. -/
+def insPermR (b : Equiv.Perm (Fin (m + 1) ⊕ Fin n)) : Equiv.Perm (Fin (m + 1) ⊕ Fin (n + 1)) :=
+  (insHatR b).trans finSumFinEquiv.symm
+
+theorem insPermR_inr_zero (b : Equiv.Perm (Fin (m + 1) ⊕ Fin n)) :
+    insPermR b (Sum.inr 0) = Sum.inl 0 := by
+  rw [insPermR, Equiv.trans_apply, insHatR_inr_zero, Equiv.symm_apply_eq]
+  apply Fin.ext; simp
+
+/- ---- sign of insPermR ---- -/
+
+/-- The within-block conjugate of `b` used to factor `insPermR b = insPermR 1 * liftR b`. -/
+def liftR (b : Equiv.Perm (Fin (m + 1) ⊕ Fin n)) : Equiv.Perm (Fin (m + 1) ⊕ Fin (n + 1)) :=
+  dropR.trans ((Equiv.optionCongr b).trans dropR.symm)
+
+theorem insPermR_eq_mul (b : Equiv.Perm (Fin (m + 1) ⊕ Fin n)) :
+    insPermR b = insPermR 1 * liftR b := by
+  ext x
+  simp only [insPermR, liftR, insHatR, Equiv.Perm.mul_apply, Equiv.trans_apply,
+    Equiv.apply_symm_apply, Equiv.optionCongr_apply, Equiv.Perm.coe_one, Option.map_id, id_eq]
+
+theorem sign_liftR (b : Equiv.Perm (Fin (m + 1) ⊕ Fin n)) :
+    Equiv.Perm.sign (liftR b) = Equiv.Perm.sign b := by
+  rw [Equiv.Perm.sign_eq_sign_of_equiv (liftR b) (Equiv.optionCongr b) dropR ?_,
+    Equiv.optionCongr_sign]
+  intro x
+  simp only [liftR, Equiv.trans_apply, Equiv.apply_symm_apply]
+
+theorem sign_insPermR_one :
+    Equiv.Perm.sign (insPermR (1 : Equiv.Perm (Fin (m + 1) ⊕ Fin n))) = (-1) ^ (m + 1) := by
+  have hlt : m + 1 < m + 1 + (n + 1) := by omega
+  set c : Fin (m + 1 + (n + 1)) := ⟨m + 1, hlt⟩ with hc
+  have hsign : Equiv.Perm.sign (insPermR (1 : Equiv.Perm (Fin (m + 1) ⊕ Fin n)))
+      = Equiv.Perm.sign (Fin.cycleRange c) := by
+    refine Equiv.Perm.sign_eq_sign_of_equiv (insPermR 1) (Fin.cycleRange c) finSumFinEquiv ?_
+    intro x
+    have hfin : finSumFinEquiv (insPermR 1 x) = insHatR 1 x := by
+      rw [insPermR, Equiv.trans_apply, Equiv.apply_symm_apply]
+    rw [hfin]
+    rcases x with i | j
+    · rw [insHatR_inl, Equiv.Perm.one_apply, finSumFinEquiv_apply_left, finSumFinEquiv_apply_left]
+      have hji : Fin.castAdd (n + 1) i < c := by
+        rw [Fin.lt_iff_val_lt_val]; simp only [Fin.coe_castAdd, hc]; omega
+      rw [Fin.cycleRange_of_lt hji, ← Fin.castSucc_castAdd, Fin.coeSucc_eq_succ]
+    · induction j using Fin.cases with
+      | zero =>
+        rw [insHatR_inr_zero, finSumFinEquiv_apply_right]
+        have heq : Fin.natAdd (m + 1) (0 : Fin (n + 1)) = c := by
+          apply Fin.ext; simp only [Fin.coe_natAdd, hc, Fin.val_zero, Nat.add_zero]
+        rw [Fin.cycleRange_of_eq heq]
+      | succ k =>
+        rw [insHatR_inr_succ, Equiv.Perm.one_apply, finSumFinEquiv_apply_right,
+          finSumFinEquiv_apply_right]
+        have hgt : c < Fin.natAdd (m + 1) k.succ := by
+          rw [Fin.lt_iff_val_lt_val]; simp only [Fin.coe_natAdd, Fin.val_succ, hc]; omega
+        rw [Fin.cycleRange_of_gt hgt]
+        apply Fin.ext
+        simp only [Fin.val_succ, Fin.coe_natAdd]
+        omega
+  rw [hsign, Fin.sign_cycleRange]
+
+theorem sign_insPermR (b : Equiv.Perm (Fin (m + 1) ⊕ Fin n)) :
+    Equiv.Perm.sign (insPermR b) = (-1) ^ (m + 1) * Equiv.Perm.sign b := by
+  rw [insPermR_eq_mul, map_mul, sign_insPermR_one, sign_liftR]
+
+/- ---- Part B term identity ---- -/
+
+theorem finSumFinEquiv_insPermR (b : Equiv.Perm (Fin (m + 1) ⊕ Fin n))
+    (s : Fin (m + 1) ⊕ Fin (n + 1)) : finSumFinEquiv (insPermR b s) = insHatR b s := by
+  rw [insPermR, Equiv.trans_apply, Equiv.apply_symm_apply]
+
+theorem wB_inl (b : Equiv.Perm (Fin (m + 1) ⊕ Fin n)) (i : Fin (m + 1)) :
+    finAddFlipAssoc (finSumFinEquiv (insPermR b (Sum.inl i)))
+      = (finAddFlipAssoc (finSumFinEquiv (b (Sum.inl i)))).succ := by
+  apply Fin.ext
+  rw [finSumFinEquiv_insPermR, insHatR_inl]
+  simp only [finAddFlipAssoc, finCongr_apply, Fin.coe_cast, Fin.val_succ]
+
+theorem wB_inr_zero (b : Equiv.Perm (Fin (m + 1) ⊕ Fin n)) :
+    finAddFlipAssoc (finSumFinEquiv (insPermR b (Sum.inr 0))) = 0 := by
+  apply Fin.ext
+  rw [finSumFinEquiv_insPermR, insHatR_inr_zero]
+  simp only [finAddFlipAssoc, finCongr_apply, Fin.coe_cast, Fin.val_zero]
+
+theorem wB_inr_succ (b : Equiv.Perm (Fin (m + 1) ⊕ Fin n)) (k : Fin n) :
+    finAddFlipAssoc (finSumFinEquiv (insPermR b (Sum.inr k.succ)))
+      = (finAddFlipAssoc (finSumFinEquiv (b (Sum.inr k)))).succ := by
+  apply Fin.ext
+  rw [finSumFinEquiv_insPermR, insHatR_inr_succ]
+  simp only [finAddFlipAssoc, finCongr_apply, Fin.coe_cast, Fin.val_succ]
+
+theorem claim_g_B (b : Equiv.Perm (Fin (m + 1) ⊕ Fin n)) (x₀ : E) (y : Fin (m + (n + 1)) → E) :
+    (fun i => ((Fin.cons x₀ y ∘ ⇑finAddFlipAssoc) ∘ ⇑finSumFinEquiv) (insPermR b (Sum.inl i)))
+      = (fun i => ((y ∘ ⇑finAddFlipAssoc) ∘ ⇑finSumFinEquiv) (b (Sum.inl i))) := by
+  funext i
+  simp only [Function.comp_apply]
+  rw [wB_inl, Fin.cons_succ]
+
+theorem claim_h_B (b : Equiv.Perm (Fin (m + 1) ⊕ Fin n)) (x₀ : E) (y : Fin (m + (n + 1)) → E) :
+    (fun j => ((Fin.cons x₀ y ∘ ⇑finAddFlipAssoc) ∘ ⇑finSumFinEquiv) (insPermR b (Sum.inr j)))
+      = (Fin.cons x₀ (fun k => ((y ∘ ⇑finAddFlipAssoc) ∘ ⇑finSumFinEquiv) (b (Sum.inr k))) : Fin _ → E) := by
+  funext j
+  simp only [Function.comp_apply]
+  induction j using Fin.cases with
+  | zero => rw [wB_inr_zero, Fin.cons_zero, Fin.cons_zero]
+  | succ k => rw [wB_inr_succ, Fin.cons_succ, Fin.cons_succ]
+
+theorem summandB (g : E [⋀^Fin (m + 1)]→L[𝕜] N) (h : E [⋀^Fin (n + 1)]→L[𝕜] N')
+    (f : N →L[𝕜] N' →L[𝕜] N'') (x₀ : E) (y : Fin (m + (n + 1)) → E)
+    (b : Equiv.Perm (Fin (m + 1) ⊕ Fin n)) :
+    uncurrySum.summand (f.compContinuousAlternatingMap₂ g h) (Quotient.mk'' (insPermR b))
+        ((Fin.cons x₀ y ∘ ⇑finAddFlipAssoc) ∘ ⇑finSumFinEquiv)
+      = (-1 : 𝕜) ^ (m + 1) • uncurrySum.summand (f.compContinuousAlternatingMap₂ g (curryFin h x₀))
+        (Quotient.mk'' b) ((y ∘ ⇑finAddFlipAssoc) ∘ ⇑finSumFinEquiv) := by
+  rw [summand_mk_eval, summand_mk_eval,
+    ContinuousLinearMap.compContinuousAlternatingMap₂_apply,
+    ContinuousLinearMap.compContinuousAlternatingMap₂_apply, curryFin_apply,
+    claim_g_B, claim_h_B, sign_insPermR, mul_smul]
+  rw [Units.smul_def ((-1 : ℤˣ) ^ (m + 1)), Units.val_pow_eq_pow_val, Units.val_neg, Units.val_one,
+    ← Int.cast_smul_eq_zsmul 𝕜, Int.cast_pow, Int.cast_neg, Int.cast_one]
+
+/- ---- Part B descent + injectivity ---- -/
+
+theorem insPermR_mul_sumCongr (b : Equiv.Perm (Fin (m + 1) ⊕ Fin n))
+    (sl : Equiv.Perm (Fin (m + 1))) (sr : Equiv.Perm (Fin n)) :
+    insPermR (b * Equiv.sumCongr sl sr)
+      = insPermR b * Equiv.sumCongr sl (Equiv.Perm.decomposeFin.symm (0, sr)) := by
+  ext z
+  rw [Equiv.Perm.mul_apply, insPermR, Equiv.trans_apply, insPermR, Equiv.trans_apply]
+  congr 1
+  rcases z with i | j
+  · rw [Equiv.sumCongr_apply, Sum.map_inl, insHatR_inl, insHatR_inl, Equiv.Perm.mul_apply,
+      Equiv.sumCongr_apply, Sum.map_inl]
+  · induction j using Fin.cases with
+    | zero =>
+      rw [Equiv.sumCongr_apply, Sum.map_inr, Equiv.Perm.decomposeFin_symm_apply_zero,
+        insHatR_inr_zero, insHatR_inr_zero]
+    | succ k =>
+      rw [Equiv.sumCongr_apply, Sum.map_inr, Equiv.Perm.decomposeFin_symm_apply_succ,
+        Equiv.swap_self, Equiv.refl_apply, insHatR_inr_succ, insHatR_inr_succ, Equiv.Perm.mul_apply,
+        Equiv.sumCongr_apply, Sum.map_inr]
+
+open Equiv.Perm in
+theorem projR_spec (a b : Equiv.Perm (Fin (m + 1) ⊕ Fin n))
+    (h : (QuotientGroup.leftRel (Equiv.Perm.sumCongrHom (Fin (m + 1)) (Fin n)).range) a b) :
+    (Quot.mk (⇑(QuotientGroup.leftRel (sumCongrHom (Fin (m + 1)) (Fin (n + 1))).range))
+        (insPermR a)) =
+      (Quot.mk (⇑(QuotientGroup.leftRel (sumCongrHom (Fin (m + 1)) (Fin (n + 1))).range))
+        (insPermR b)) := by
+  apply Quot.sound
+  rw [QuotientGroup.leftRel_apply] at h ⊢
+  obtain ⟨⟨sl, sr⟩, hb⟩ := h
+  simp only [sumCongrHom_apply, MonoidHom.coe_mk, OneHom.coe_mk] at hb
+  have hbb : b = a * Equiv.sumCongr sl sr := by
+    rw [show Equiv.sumCongr sl sr = sl.sumCongr sr from rfl, hb, mul_inv_cancel_left]
+  rw [hbb, insPermR_mul_sumCongr]
+  refine ⟨(sl, Equiv.Perm.decomposeFin.symm (0, sr)), ?_⟩
+  simp only [sumCongrHom_apply]
+  group
+
+/-- The descended right-block insertion `Q_B → Q`. -/
+def projR (q : Equiv.Perm.ModSumCongr (Fin (m + 1)) (Fin n)) :
+    Equiv.Perm.ModSumCongr (Fin (m + 1)) (Fin (n + 1)) :=
+  Quotient.liftOn' q (fun b => Quotient.mk'' (insPermR b)) projR_spec
+
+@[simp] theorem projR_mk (b : Equiv.Perm (Fin (m + 1) ⊕ Fin n)) :
+    projR (Quotient.mk'' b) = Quotient.mk'' (insPermR b) := rfl
+
+theorem insHatR_injective (b : Equiv.Perm (Fin (m + 1) ⊕ Fin n)) :
+    Function.Injective (insHatR b) := (insHatR b).injective
+
+theorem insPermR_left_injective :
+    Function.Injective (insPermR : Equiv.Perm (Fin (m + 1) ⊕ Fin n) → _) := by
+  intro b₁ b₂ h
+  have h' : insHatR b₁ = insHatR b₂ := by
+    have := congrArg (fun e => e.trans finSumFinEquiv) h
+    simpa only [insPermR, Equiv.symm_trans_self, Equiv.trans_refl, Equiv.trans_assoc] using this
+  ext z
+  rcases z with i | j
+  · have := Equiv.congr_fun h' (Sum.inl i)
+    rw [insHatR_inl, insHatR_inl] at this
+    exact finSumFinEquiv.injective (Fin.succ_injective _ this)
+  · have := Equiv.congr_fun h' (Sum.inr j.succ)
+    rw [insHatR_inr_succ, insHatR_inr_succ] at this
+    exact finSumFinEquiv.injective (Fin.succ_injective _ this)
+
+theorem projR_left_injective (b₁ b₂ : Equiv.Perm (Fin (m + 1) ⊕ Fin n))
+    (h : Quotient.mk'' (insPermR b₁) =
+      (Quotient.mk'' (insPermR b₂) : Equiv.Perm.ModSumCongr (Fin (m + 1)) (Fin (n + 1)))) :
+    (Quotient.mk'' b₁ : Equiv.Perm.ModSumCongr (Fin (m + 1)) (Fin n)) = Quotient.mk'' b₂ := by
+  rw [Quotient.eq'', QuotientGroup.leftRel_apply] at h
+  obtain ⟨⟨sl, sr⟩, hsl⟩ := h
+  simp only [Equiv.Perm.sumCongrHom_apply] at hsl
+  have hmul : insPermR b₂ = insPermR b₁ * Equiv.sumCongr sl sr := by
+    rw [show Equiv.sumCongr sl sr = sl.sumCongr sr from rfl, hsl, mul_inv_cancel_left]
+  -- evaluating at `inr 0` forces `sr 0 = 0`
+  have hsr0 : sr 0 = 0 := by
+    have e2 : insPermR b₂ (Sum.inr 0) = Sum.inl 0 := insPermR_inr_zero b₂
+    rw [hmul, Equiv.Perm.mul_apply, Equiv.sumCongr_apply, Sum.map_inr] at e2
+    have e1 : insPermR b₁ (Sum.inr 0) = Sum.inl 0 := insPermR_inr_zero b₁
+    exact Sum.inr_injective ((insPermR b₁).injective (e2.trans e1.symm))
+  set sr' := (Equiv.Perm.decomposeFin sr).2 with hsr'def
+  have hsr_eq : sr = Equiv.Perm.decomposeFin.symm (0, sr') := by
+    have hsplit : sr = Equiv.Perm.decomposeFin.symm (Equiv.Perm.decomposeFin sr) := by
+      rw [Equiv.symm_apply_apply]
+    have hp : (Equiv.Perm.decomposeFin sr).1 = 0 := by
+      have h0 : Equiv.Perm.decomposeFin.symm (Equiv.Perm.decomposeFin sr) 0 = sr 0 := by
+        rw [Equiv.symm_apply_apply]
+      rw [Equiv.Perm.decomposeFin_symm_apply_zero] at h0
+      rw [h0, hsr0]
+    rw [hsplit]; congr 1; rw [← hp]
+  rw [hsr_eq, ← insPermR_mul_sumCongr] at hmul
+  have hb := insPermR_left_injective hmul
+  rw [Quotient.eq'', QuotientGroup.leftRel_apply]
+  exact ⟨(sl, sr'), by simp only [Equiv.Perm.sumCongrHom_apply]; rw [hb]; group⟩
+
+/- ---- Part B surjectivity: restPermR ---- -/
+
+/-- Remove the marked slot `inr 0`/output `0` from a `τ'` with `τ' (inr 0) = inl 0`. -/
+def restOptR (τ' : Equiv.Perm (Fin (m + 1) ⊕ Fin (n + 1))) :
+    Option (Fin (m + 1) ⊕ Fin n) ≃ Option (Fin (m + 1 + n)) :=
+  dropR.symm.trans (τ'.trans (finSumFinEquiv.trans (finSuccEquiv' 0)))
+
+theorem restOptR_none {τ' : Equiv.Perm (Fin (m + 1) ⊕ Fin (n + 1))}
+    (hτ' : τ' (Sum.inr 0) = Sum.inl 0) : restOptR τ' none = none := by
+  have hz : finSumFinEquiv (Sum.inl (0 : Fin (m + 1)) : Fin (m + 1) ⊕ Fin (n + 1)) = 0 := by
+    apply Fin.ext; simp [finSumFinEquiv_apply_left]
+  rw [restOptR, Equiv.trans_apply, Equiv.trans_apply, Equiv.trans_apply, dropR_symm_none, hτ', hz]
+  exact finSuccEquiv'_at 0
+
+def restHatR (τ' : Equiv.Perm (Fin (m + 1) ⊕ Fin (n + 1))) :
+    Fin (m + 1) ⊕ Fin n ≃ Fin (m + 1 + n) :=
+  Equiv.removeNone (restOptR τ')
+
+def restPermR (τ' : Equiv.Perm (Fin (m + 1) ⊕ Fin (n + 1))) :
+    Equiv.Perm (Fin (m + 1) ⊕ Fin n) :=
+  (restHatR τ').trans finSumFinEquiv.symm
+
+theorem finSumFinEquiv_restPermR (τ' : Equiv.Perm (Fin (m + 1) ⊕ Fin (n + 1)))
+    (z : Fin (m + 1) ⊕ Fin n) : finSumFinEquiv (restPermR τ' z) = restHatR τ' z := by
+  simp [restPermR]
+
+theorem succ_restHatR (τ' : Equiv.Perm (Fin (m + 1) ⊕ Fin (n + 1)))
+    (hτ' : τ' (Sum.inr 0) = Sum.inl 0) (z : Fin (m + 1) ⊕ Fin n) :
+    (restHatR τ' z).succ = finSumFinEquiv (τ' (Sum.map id Fin.succ z)) := by
+  have hex : ∃ p, restOptR τ' (some z) = some p := by
+    rcases h : restOptR τ' (some z) with _ | p
+    · exact absurd ((restOptR τ').injective (h.trans (restOptR_none hτ').symm)) (by simp)
+    · exact ⟨p, rfl⟩
+  have hsome : some (restHatR τ' z) = restOptR τ' (some z) := Equiv.removeNone_some _ hex
+  have hz : dropR.symm (some z) = Sum.map id Fin.succ z := by rcases z with k | j <;> simp
+  rw [restOptR, Equiv.trans_apply, Equiv.trans_apply, Equiv.trans_apply, hz] at hsome
+  apply (finSuccEquiv' (0 : Fin (m + 1 + n + 1))).injective
+  rw [fse0_succ]
+  exact hsome
+
+theorem insPermR_restPermR (τ' : Equiv.Perm (Fin (m + 1) ⊕ Fin (n + 1)))
+    (hτ' : τ' (Sum.inr 0) = Sum.inl 0) : insPermR (restPermR τ') = τ' := by
+  ext z
+  rw [insPermR, Equiv.trans_apply, Equiv.symm_apply_eq]
+  rcases z with i | j
+  · rw [insHatR_inl, finSumFinEquiv_restPermR, succ_restHatR τ' hτ', Sum.map_inl, id]
+  · induction j using Fin.cases with
+    | zero =>
+      rw [insHatR_inr_zero, hτ']
+      apply Fin.ext; simp [finSumFinEquiv_apply_left]
+    | succ k =>
+      rw [insHatR_inr_succ, finSumFinEquiv_restPermR, succ_restHatR τ' hτ', Sum.map_inr]
+
+/- ---- Identity 2 (Part B) ---- -/
+theorem identityB (g : E [⋀^Fin (m + 1)]→L[𝕜] N) (h : E [⋀^Fin (n + 1)]→L[𝕜] N')
+    (f : N →L[𝕜] N' →L[𝕜] N'') (x₀ : E) (y : Fin (m + (n + 1)) → E) :
+    (-1 : 𝕜) ^ (m + 1) • ∑ b : Equiv.Perm.ModSumCongr (Fin (m + 1)) (Fin n),
+        uncurrySum.summand (f.compContinuousAlternatingMap₂ g (curryFin h x₀)) b
+          ((y ∘ ⇑finAddFlipAssoc) ∘ ⇑finSumFinEquiv)
+      = ∑ σ ∈ Finset.univ.filter (fun q => ¬ isLeftClass q = true),
+        uncurrySum.summand (f.compContinuousAlternatingMap₂ g h) σ
+          ((Fin.cons x₀ y ∘ ⇑finAddFlipAssoc) ∘ ⇑finSumFinEquiv) := by
+  rw [Finset.smul_sum]
+  refine Finset.sum_bij (fun b _ => projR b) ?_ ?_ ?_ ?_
+  · -- maps into right-classes
+    intro a _
+    rw [Finset.mem_filter]
+    refine ⟨Finset.mem_univ _, ?_⟩
+    induction a using Quotient.inductionOn' with
+    | _ b =>
+      have key : (insPermR b)⁻¹ (Sum.inl 0) = Sum.inr 0 := by
+        rw [Equiv.Perm.inv_eq_iff_eq]; exact (insPermR_inr_zero b).symm
+      simp only [projR_mk, isLeftClass, Quotient.liftOn'_mk'', key, Sum.isLeft_inr,
+        Bool.false_eq_true, not_false_eq_true]
+  · -- injective
+    intro a₁ _ a₂ _ heq
+    induction a₁ using Quotient.inductionOn' with
+    | _ b₁ =>
+    induction a₂ using Quotient.inductionOn' with
+    | _ b₂ =>
+      simp only [projR_mk] at heq
+      exact projR_left_injective b₁ b₂ heq
+  · -- surjective onto right-classes
+    intro c hc
+    rw [Finset.mem_filter] at hc
+    induction c using Quotient.inductionOn' with
+    | _ τ =>
+      rcases h0 : τ⁻¹ (Sum.inl 0) with i₀ | j₀
+      · exfalso
+        have hc2 := hc.2
+        simp only [isLeftClass, Quotient.liftOn'_mk'', h0, Sum.isLeft_inl, not_true_eq_false] at hc2
+      · set τ' := τ * Equiv.sumCongr (Equiv.refl (Fin (m + 1))) j₀.cycleRange.symm with hτ'def
+        have hτ' : τ' (Sum.inr 0) = Sum.inl 0 := by
+          rw [hτ'def, Equiv.Perm.mul_apply, Equiv.sumCongr_apply, Sum.map_inr,
+            Fin.cycleRange_symm_zero, ← h0, Equiv.Perm.apply_inv_self]
+        refine ⟨Quotient.mk'' (restPermR τ'), Finset.mem_univ _, ?_⟩
+        simp only [projR_mk]
+        rw [insPermR_restPermR τ' hτ', hτ'def, Quotient.eq'', QuotientGroup.leftRel_apply]
+        refine ⟨(Equiv.refl (Fin (m + 1)), j₀.cycleRange), ?_⟩
+        simp only [Equiv.Perm.sumCongrHom_apply]
+        have hg : (τ * Equiv.sumCongr (Equiv.refl (Fin (m + 1))) j₀.cycleRange.symm)⁻¹ * τ
+            = (Equiv.sumCongr (Equiv.refl (Fin (m + 1))) j₀.cycleRange.symm)⁻¹ := by group
+        rw [hg, Equiv.Perm.inv_def, Equiv.sumCongr_symm, Equiv.refl_symm, Equiv.symm_symm]
+  · -- term identity
+    intro a _
+    induction a using Quotient.inductionOn' with
+    | _ b => simp only [projR_mk]; exact (summandB g h f x₀ y b).symm
+
+/- ===================== Assembly: curryFin_wedge ===================== -/
+theorem curryFin_wedge (g : E [⋀^Fin (m + 1)]→L[𝕜] N) (h : E [⋀^Fin (n + 1)]→L[𝕜] N')
+    (f : N →L[𝕜] N' →L[𝕜] N'') (x₀ : E) :
+    curryFin (domDomCongr finAddFlipAssoc (wedge_product g h f)) x₀ =
+      wedge_product (curryFin g x₀) h f
+      + (-1 : 𝕜) ^ (m + 1) • domDomCongr finAddFlipAssoc (wedge_product g (curryFin h x₀) f) := by
+  ext y
+  rw [curryFin_apply, domDomCongr_apply, wedge_product_apply_sum]
+  show _ = (wedge_product (curryFin g x₀) h f) y
+      + ((-1 : 𝕜) ^ (m + 1) • domDomCongr finAddFlipAssoc (wedge_product g (curryFin h x₀) f)) y
+  rw [smul_apply, domDomCongr_apply, wedge_product_apply_sum, wedge_product_apply_sum,
+    identityA, identityB]
+  exact (Finset.sum_filter_add_sum_filter_not _ _ _).symm
+
 end commute
 
 end ContinuousAlternatingMap

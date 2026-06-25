@@ -383,21 +383,17 @@ theorem ederiv_wedge (ω : Ω^m⟮E, F⟯) (τ : Ω^n⟮E, F'⟯) (f : F →L[�
     ContinuousAlternatingMap.uncurryFin_precompL_wedge, Pi.add_apply, Pi.smul_apply]
   exact add_comm _ _
 
-/- The graded Leibniz rule for the interior product of the wedge product -/
+/- The graded Leibniz rule for the interior product of the wedge product.
+
+Note: this is the antiderivation rule `ι_v (ω ∧ τ) = (ι_v ω) ∧ τ + (-1)^{deg ω} ω ∧ (ι_v τ)`.
+Since `deg ω = m + 1`, the sign is `(-1)^(m+1)` (the value-preserving `finAddFlipAssoc`
+relabellings carry no sign). -/
 theorem iprod_wedge (ω : Ω^m + 1⟮E, F⟯) (τ : Ω^n + 1⟮E, F'⟯) (f : F →L[ℝ] F' →L[ℝ] F'') (v : E → E) :
     iprod (domDomCongr finAddFlipAssoc (ω ∧[f] τ)) v = ((iprod ω v) ∧[f] τ)
-      + (-1)^m • (domDomCongr finAddFlipAssoc (ω ∧[f] (iprod τ v))) := by
-  ext e x
-  rw[_root_.add_apply]
-  erw[ContinuousAlternatingMap.add_apply] -- FIXME
-  simp only [Nat.add_eq, Int.reduceNeg, Pi.smul_apply, coe_smul]
-  rw[wedge_product_def, domDomCongr_apply, wedge_product_def, ContinuousAlternatingMap.wedge_product_def,
-    uncurryFinAdd, ContinuousAlternatingMap.domDomCongr_apply, uncurrySum_apply, ContinuousMultilinearMap.sum_apply,
-    ContinuousAlternatingMap.wedge_product_def, uncurryFinAdd, ContinuousAlternatingMap.domDomCongr_apply,
-    uncurrySum_apply, ContinuousMultilinearMap.sum_apply, iprod_apply, curryFin_apply, domDomCongr_apply,
-    wedge_product_def, ContinuousAlternatingMap.wedge_product_def, uncurryFinAdd,
-    ContinuousAlternatingMap.domDomCongr_apply, uncurrySum_apply, ContinuousMultilinearMap.sum_apply]
-  sorry
+      + ((-1 : ℝ))^(m + 1) • (domDomCongr finAddFlipAssoc (ω ∧[f] (iprod τ v))) := by
+  funext e
+  rw [Pi.add_apply, Pi.smul_apply]
+  exact ContinuousAlternatingMap.curryFin_wedge (ω e) (τ e) f (v e)
 
 /- Exterior derivative commutes with pullback -/
 theorem pullback_ederiv (f : E → F) (ω : Ω^n⟮F, G⟯) {x : E} (hf : ContDiffAt ℝ 2 f x)
