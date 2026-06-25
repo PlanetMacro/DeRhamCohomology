@@ -2,6 +2,8 @@ import DeRhamCohomology.Alternating.Basic
 import DeRhamCohomology.ContinuousAlternatingMap.Curry
 import DeRhamCohomology.ContinuousAlternatingMap.FDeriv
 import DeRhamCohomology.ContinuousAlternatingMap.Wedge
+import DeRhamCohomology.ContinuousAlternatingMap.WedgeFDeriv
+import DeRhamCohomology.ContinuousAlternatingMap.WedgeAssoc
 import DeRhamCohomology.DifferentialForm
 import DeRhamCohomology.Equiv.Fin
 import DeRhamCohomology.Fin

@@ -3,6 +3,7 @@ import DeRhamCohomology.ContinuousAlternatingMap.Curry
 import DeRhamCohomology.ContinuousAlternatingMap.FDeriv
 import DeRhamCohomology.ContinuousAlternatingMap.Wedge
 import DeRhamCohomology.ContinuousAlternatingMap.WedgeFDeriv
+import DeRhamCohomology.ContinuousAlternatingMap.WedgeAssoc
 import DeRhamCohomology.Equiv.Fin
 
 noncomputable section

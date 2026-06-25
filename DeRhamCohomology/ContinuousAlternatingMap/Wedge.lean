@@ -87,17 +87,9 @@ lemma sign_addAssocPerm (σ₁ : Equiv.Perm ((Fin m ⊕ Fin n) ⊕ Fin p)) :
 --     rcases x with ⟨σ₁⟩
 --     simp
 
-/- Associativity of multiplication wedge product -/
-theorem wedge_mul_assoc (g : M [⋀^Fin m]→L[𝕜] 𝕜) (h : M [⋀^Fin n]→L[𝕜] 𝕜)
-    (l : M [⋀^Fin p]→L[𝕜] 𝕜) (v : Fin (m + n + p) → M):
-    ContinuousAlternatingMap.domDomCongr finAssoc.symm (g ∧[𝕜] h ∧[𝕜] l) v = ((g ∧[𝕜] h) ∧[𝕜] l) v := by
-  rw[wedge_product_def, uncurryFinAdd, domDomCongr_apply, domDomCongr_apply, uncurrySum_apply,
-    ContinuousMultilinearMap.sum_apply, wedge_product_def, uncurryFinAdd, domDomCongr_apply,
-    uncurrySum_apply, ContinuousMultilinearMap.sum_apply]
-  rw[wedge_product, wedge_product]
-  rw[uncurryFinAdd, uncurryFinAdd]
-  -- Want to have functionality to partially unpack
-  sorry
+/- Associativity of multiplication wedge product (`wedge_mul_assoc`) is proved in
+`DeRhamCohomology.ContinuousAlternatingMap.WedgeAssoc`, since the argument routes through the
+shuffle-sum infrastructure of `WedgeFDeriv` (which imports this file). -/
 
 /- Left distributivity of wedge product -/
 theorem add_wedge (g₁ g₂ : M [⋀^Fin m]→L[𝕜] N) (h : M [⋀^Fin n]→L[𝕜] N') (f : N →L[𝕜] N' →L[𝕜] N'') :
